@@ -39,31 +39,27 @@ def is_login_successful(driver: selenium.webdriver.Firefox, login: str, password
         driver.find_element(by=By.CLASS_NAME, value='inventory_item_description')
         return True
     except selenium.common.exceptions.NoSuchElementException:
+        driver.quit()
         return False
 
 
-def handle_login(driver: selenium.webdriver.Firefox, login: str, password: str):
+def authorise(url: str, login: str = None, password: str = None):
+    driver = selenium.webdriver.Firefox()
+    driver.get(url)
+
+    if login is None and password is None:
+        login, password = parse_login_and_password(driver)
+        logging.info(f"Выбран случайный логин: {login}")
+    elif login is None or password is None:
+        raise LoginError("Для авторизации необходимо передать и логин, и пароль.")
+
     if is_login_successful(driver, login, password):
         crud.create_new_user(login, password)
-        logging.info(f"Авторизация под логином {login} прошла успешно")
+        logging.info(f"Авторизация под логином {login} прошла успешно.")
         update_data_and_accept_order(driver, login)
     else:
-        logging.warning(f"Не удалось авторизоваться под логином {login}")
+        logging.warning(f"Не удалось авторизоваться под логином {login}.")
         raise LoginError(f"Под логином {login} не получилось авторизоваться!")
-
-
-def authorise(login: str = None, password: str = None):
-    driver = selenium.webdriver.Firefox()
-    driver.get("https://www.saucedemo.com/")
-
-    if login and password:
-        handle_login(driver, login, password)
-    elif login or password:
-        raise LoginError("Для авторизации необходимо передать и логин, и пароль.")
-    else:
-        login, password = parse_login_and_password(driver)
-        logging.info(f"Выбран рандомный логин: {login}")
-        handle_login(driver, login, password)
 
 
 def collect_user_data(login):
@@ -135,9 +131,9 @@ def update_data_and_accept_order(driver: selenium.webdriver.Firefox, login: str)
         driver.quit()
 
 
-def setup_and_authorise():
+def main():
     crud.create_or_replace_tables()
-    authorise()
+    authorise("https://www.saucedemo.com/")
 
 
-setup_and_authorise()
+main()
